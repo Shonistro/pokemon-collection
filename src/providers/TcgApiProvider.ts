@@ -74,28 +74,36 @@ function extractMarketPrice(payload: unknown): number | null {
   return null;
 }
 
-const FULL_NUMBER_RE = /^(\d{1,5})\s*\/\s*(\d{1,5})$/;
+// A full collector number with a slash: "098/088", "TG12/TG30", "GG01/GG70",
+// "SV001/SV198". Must contain at least one digit so plain "a/b" text isn't caught.
+const FULL_NUMBER_RE = /^[A-Za-z0-9]{1,6}\s*\/\s*[A-Za-z0-9]{1,6}$/;
 
-/** True when the query is a full collector number, e.g. "098/088". */
+/** True when the query looks like a full collector number. */
 export function isFullNumber(query: string): boolean {
-  return FULL_NUMBER_RE.test(query.trim());
+  const q = query.trim();
+  return FULL_NUMBER_RE.test(q) && /\d/.test(q);
 }
 
 /**
- * The term we actually send to the API. The full-text search matches a bare
- * numerator ("098") but NOT the slash form ("098/088"), so for a full number we
- * send just the numerator and filter for the exact match afterwards. Plain name
- * queries pass through unchanged.
+ * The term we actually send to the API. The full-text search matches the bare
+ * numerator ("098", "TG12") but NOT the slash form, so for a full number we send
+ * just the part before the slash and filter for the exact match afterwards.
+ * Plain name queries pass through unchanged.
  */
 export function normalizeQuery(query: string): string {
-  const m = query.trim().match(FULL_NUMBER_RE);
-  return m ? m[1] : query.trim();
+  const q = query.trim();
+  return isFullNumber(q) ? q.split('/')[0].trim() : q;
 }
 
-/** Canonical, leading-zero-insensitive number key, e.g. "098/088" -> "98/88". */
+/** Canonical number key: lowercase, no spaces, leading-zero-insensitive. */
 function canonicalNumber(s: string): string {
-  const m = s.trim().match(FULL_NUMBER_RE);
-  return m ? `${parseInt(m[1], 10)}/${parseInt(m[2], 10)}` : s.trim().toLowerCase();
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .split('/')
+    .map((seg) => (/^\d+$/.test(seg) ? String(parseInt(seg, 10)) : seg))
+    .join('/');
 }
 
 /**
@@ -117,7 +125,13 @@ export class TcgApiProvider implements PriceProvider {
     // collector number so the user gets the card they actually asked for.
     if (isFullNumber(raw)) {
       const want = canonicalNumber(raw);
-      return results.filter((r) => r.number != null && canonicalNumber(r.number) === want);
+      const exact = results.filter(
+        (r) => r.number != null && canonicalNumber(r.number) === want,
+      );
+      // Prefer the exact collector-number match; if none (e.g. the card isn't in
+      // the numerator results), fall back to the broader list instead of showing
+      // an empty screen.
+      return exact.length > 0 ? exact : results;
     }
 
     return results;

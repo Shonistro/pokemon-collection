@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGames, type GameOption } from '../hooks/useGames';
+import { useFavoriteGames } from '../hooks/useFavoriteGames';
 import { useCollectionMutations } from '../hooks/useCollection';
 import { getProviderForGame } from '../providers/registry';
 import { uploadCardImage } from '../lib/storage';
@@ -8,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../lib/format';
 import { CONDITIONS, type CardResult, type Condition } from '../types';
 import { Spinner } from '../components/Spinner';
-import { ChevronLeftIcon, ImageIcon, SearchIcon } from '../components/icons';
+import { ChevronLeftIcon, ImageIcon, SearchIcon, StarIcon } from '../components/icons';
 
 /** What the user is about to add — drives how we build the DB write. */
 type Draft =
@@ -69,12 +70,23 @@ function GamePicker({
   onPick: (g: GameOption) => void;
 }) {
   const [q, setQ] = useState('');
-  const filtered = games.filter((g) => g.name.toLowerCase().includes(q.toLowerCase()));
+  const { isFavorite, toggle } = useFavoriteGames();
+
+  const filtered = games
+    .filter((g) => g.name.toLowerCase().includes(q.toLowerCase()))
+    // Favorites first, then alphabetical.
+    .sort((a, b) => {
+      const fa = isFavorite(a.slug) ? 0 : 1;
+      const fb = isFavorite(b.slug) ? 0 : 1;
+      return fa - fb || a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Add a card</h1>
-      <p className="text-sm text-white/50">Choose a game to add a card from.</p>
+      <p className="text-sm text-white/50">
+        Choose a game. Tap the ★ to pin your games to the top.
+      </p>
 
       <div className="relative">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
@@ -92,18 +104,35 @@ function GamePicker({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-2">
-          {filtered.map((g) => (
-            <button
-              key={g.slug}
-              onClick={() => onPick(g)}
-              className="surface flex items-center justify-between px-4 py-3 text-left hover:border-accent/40"
-            >
-              <span className="font-medium">{g.name}</span>
-              <span className="text-xs uppercase tracking-wide text-white/40">
-                {g.source === 'tcgapi' ? 'TCG API' : 'Manual'}
-              </span>
-            </button>
-          ))}
+          {filtered.map((g) => {
+            const fav = isFavorite(g.slug);
+            return (
+              <div
+                key={g.slug}
+                className="surface flex items-center gap-1 pr-3 hover:border-accent/40"
+              >
+                <button
+                  onClick={() => toggle(g.slug)}
+                  className={`shrink-0 rounded-full p-3 transition-colors ${
+                    fav ? 'text-amber-400' : 'text-white/30 hover:text-white'
+                  }`}
+                  aria-label={fav ? 'Unpin game' : 'Pin game to top'}
+                  title={fav ? 'Unpin' : 'Pin to top'}
+                >
+                  <StarIcon filled={fav} className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => onPick(g)}
+                  className="flex flex-1 items-center justify-between py-3 text-left"
+                >
+                  <span className="font-medium">{g.name}</span>
+                  <span className="text-xs uppercase tracking-wide text-white/40">
+                    {g.source === 'tcgapi' ? 'TCG API' : 'Manual'}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
           {filtered.length === 0 && (
             <p className="py-6 text-center text-sm text-white/40">No games match.</p>
           )}
