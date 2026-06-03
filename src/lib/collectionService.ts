@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { tcgApiProvider } from '../providers/TcgApiProvider';
+import { getProviderBySource } from '../providers/registry';
 import type { CardSource, Condition, CollectionItem, GameSource } from '../types';
 
 /**
@@ -215,25 +215,34 @@ export interface RefreshResult {
   errors: string[];
 }
 
+// Card sources that have an API-refreshable price.
+const PRICED_SOURCES: CardSource[] = ['tcgapi', 'pokewallet'];
+
 interface CardGroup {
-  id: string; // external_id
+  id: string; // external_id (provider-specific)
+  source: CardSource; // which provider can refresh it
   rowIds: string[];
   lastUpdated: number; // ms; 0 = never priced
   oldPrice: number | null; // representative current price (becomes previous_price)
 }
 
-/** Group TCG-API items by external id (one API call serves all its copies). */
-function groupTcgCards(items: CollectionItem[]): CardGroup[] {
+/**
+ * Group API-priced items by (source, external id) — one API call per card serves
+ * all its copies. Manual cards are excluded (no API price).
+ */
+function groupPricedCards(items: CollectionItem[]): CardGroup[] {
   const map = new Map<string, CardGroup>();
   for (const i of items) {
-    if (i.card.source !== 'tcgapi' || !i.card.external_id) continue;
-    const id = i.card.external_id;
-    const g = map.get(id) ?? { id, rowIds: [], lastUpdated: 0, oldPrice: null };
+    if (!PRICED_SOURCES.includes(i.card.source) || !i.card.external_id) continue;
+    const key = `${i.card.source}:${i.card.external_id}`;
+    const g =
+      map.get(key) ??
+      { id: i.card.external_id, source: i.card.source, rowIds: [], lastUpdated: 0, oldPrice: null };
     g.rowIds.push(i.id);
     const ts = i.price_updated_at ? new Date(i.price_updated_at).getTime() : 0;
     g.lastUpdated = Math.max(g.lastUpdated, ts);
     if (g.oldPrice == null) g.oldPrice = i.last_known_price;
-    map.set(id, g);
+    map.set(key, g);
   }
   return Array.from(map.values());
 }
@@ -242,9 +251,9 @@ const isFresh = (g: CardGroup, staleMs: number) =>
   staleMs > 0 && g.lastUpdated > 0 && Date.now() - g.lastUpdated < staleMs;
 
 /** How many distinct cards a refresh would actually touch (UI preview/cost). */
-export function distinctStaleTcgCards(items: CollectionItem[], staleHours: number): number {
+export function distinctStalePricedCards(items: CollectionItem[], staleHours: number): number {
   const staleMs = staleHours * 3_600_000;
-  return groupTcgCards(items).filter((g) => !isFresh(g, staleMs)).length;
+  return groupPricedCards(items).filter((g) => !isFresh(g, staleMs)).length;
 }
 
 /**
@@ -263,7 +272,7 @@ export async function refreshPrices(
   const { staleHours = 0, maxRequests = Infinity } = opts;
   const staleMs = staleHours * 3_600_000;
 
-  const all = groupTcgCards(items);
+  const all = groupPricedCards(items);
   const skippedFresh = all.filter((g) => isFresh(g, staleMs)).length;
 
   // Eligible = stale (or never priced), oldest first.
@@ -283,9 +292,11 @@ export async function refreshPrices(
   };
 
   for (const g of toRefresh) {
+    const provider = getProviderBySource(g.source);
+    if (!provider) continue; // manual / unknown — no API price
     result.requested += 1;
     try {
-      const price = await tcgApiProvider.getPrice(g.id);
+      const price = await provider.getPrice(g.id);
       if (price == null) continue;
 
       const { error } = await supabase

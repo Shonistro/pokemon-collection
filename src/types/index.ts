@@ -18,8 +18,10 @@ export interface CollectionItem extends CollectionRow {
  * ManualProvider can produce the same shape from our own `cards` table.
  */
 export interface CardResult {
-  /** External card id (TCG API `id`) or local card id for manual results. */
+  /** External card id (provider-specific) or local card id for manual results. */
   externalId: string;
+  /** Which provider produced this result — drives where its price is refreshed. */
+  source: CardSource;
   name: string;
   setName: string | null;
   number: string | null;

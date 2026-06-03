@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCollection, useCollectionMutations } from '../hooks/useCollection';
 import { useAuth } from '../context/AuthContext';
 import { collectionTotal, formatPrice, itemValue, priceChange } from '../lib/format';
-import { distinctStaleTcgCards } from '../lib/collectionService';
+import { distinctStalePricedCards } from '../lib/collectionService';
 import { CardTile } from '../components/CardTile';
 import { PortfolioChart } from '../components/PortfolioChart';
 import { MarketMovers, MostValuable } from '../components/CollectionInsights';
@@ -103,7 +103,7 @@ export function Collection() {
   // Smart refresh: only stale cards (refreshed > STALE_HOURS ago), capped to the
   // remaining daily quota so a big collection can't blow the budget in one tap.
   const staleCount = useMemo(
-    () => distinctStaleTcgCards(filtered, STALE_HOURS),
+    () => distinctStalePricedCards(filtered, STALE_HOURS),
     [filtered],
   );
   const remaining = quota?.remaining ?? null;

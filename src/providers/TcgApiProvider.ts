@@ -44,6 +44,7 @@ function toCardResult(item: TcgSearchItem): CardResult {
   return {
     // The API returns numeric ids; store as string (external_id is a text column).
     externalId: String(item.id),
+    source: 'tcgapi',
     name: item.name,
     setName: item.set_name ?? null,
     number: item.number ?? null,

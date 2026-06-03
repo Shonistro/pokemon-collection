@@ -9,7 +9,7 @@
  */
 
 export type GameSource = 'tcgapi' | 'manual';
-export type CardSource = 'tcgapi' | 'manual';
+export type CardSource = 'tcgapi' | 'manual' | 'pokewallet';
 export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 
 export interface Database {

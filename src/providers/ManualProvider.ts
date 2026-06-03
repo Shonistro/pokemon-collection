@@ -27,6 +27,7 @@ export class ManualProvider implements PriceProvider {
 
     return (data ?? []).map((c) => ({
       externalId: c.id,
+      source: 'manual' as const,
       name: c.name,
       setName: c.set_name,
       number: c.number,

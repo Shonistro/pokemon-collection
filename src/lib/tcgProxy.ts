@@ -4,7 +4,14 @@ import type { RateLimitInfo } from '../types';
 import { setRateLimit } from './quotaStore';
 
 /** Actions accepted by the `tcg-proxy` Edge Function (must match its whitelist). */
-export type ProxyAction = 'games' | 'sets' | 'search' | 'card' | 'prices';
+export type ProxyAction =
+  | 'games'
+  | 'sets'
+  | 'search'
+  | 'card'
+  | 'prices'
+  | 'pw_search'
+  | 'pw_card';
 
 interface ProxyEnvelope<T> {
   data: T;
@@ -23,7 +30,9 @@ interface ProxyEnvelope<T> {
 export async function callProxy<T>(
   action: ProxyAction,
   params: Record<string, unknown> = {},
+  opts: { trackQuota?: boolean } = {},
 ): Promise<T> {
+  const { trackQuota = true } = opts; // PokéWallet calls pass false (separate budget)
   const { data, error } = await supabase.functions.invoke<ProxyEnvelope<T>>('tcg-proxy', {
     body: { action, params },
   });
@@ -34,12 +43,12 @@ export async function callProxy<T>(
     if (error instanceof FunctionsHttpError) {
       const body = await error.context.json().catch(() => null);
       if (body?.error) message = body.error;
-      if (body?.rateLimit) setRateLimit(body.rateLimit);
+      if (trackQuota && body?.rateLimit) setRateLimit(body.rateLimit);
     }
     throw new Error(message);
   }
 
-  if (data?.rateLimit) setRateLimit(data.rateLimit);
+  if (trackQuota && data?.rateLimit) setRateLimit(data.rateLimit);
   if (!data) throw new Error('Empty proxy response');
   return data.data;
 }

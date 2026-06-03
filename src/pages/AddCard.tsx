@@ -320,7 +320,7 @@ function ConfirmAddForm({
     try {
       if (isTcg && fromResult) {
         await add.mutateAsync({
-          game: { slug: game.slug, name: game.name, source: 'tcgapi' },
+          game: { slug: game.slug, name: game.name, source: game.source },
           card: {
             kind: 'catalog',
             externalId: fromResult.externalId,
@@ -328,7 +328,8 @@ function ConfirmAddForm({
             setName: fromResult.setName,
             number: fromResult.number,
             imageUrl: fromResult.imageUrl,
-            source: 'tcgapi',
+            // tcgapi or pokewallet — drives which provider refreshes the price.
+            source: fromResult.source,
           },
           condition,
           quantity,
