@@ -183,14 +183,16 @@ function FindCard({
         <p className="rounded-lg bg-down/10 px-3 py-2 text-sm text-down">{error}</p>
       )}
 
-      {/* Manual games can always create a brand-new card. */}
-      {isManual && (
-        <button
-          onClick={() => onSelect({ type: 'new-manual' })}
-          className="btn-ghost w-full"
-        >
-          + Enter a new card manually
-        </button>
+      {/* Any game can add a card by hand — needed for cards missing from the
+          API (e.g. German printings) or for fully manual games. */}
+      <button onClick={() => onSelect({ type: 'new-manual' })} className="btn-ghost w-full">
+        + {isManual ? 'Enter a new card manually' : "Can't find it? Add manually"}
+      </button>
+      {!isManual && (
+        <p className="text-[11px] text-white/30">
+          German cards aren't in the catalog — add them here by hand. Japanese cards: pick the
+          "Pokemon Japan" game instead. You'll set the price yourself for manual cards.
+        </p>
       )}
 
       {results && (
@@ -308,7 +310,7 @@ function ConfirmAddForm({
       } else if (isLocalManual && fromResult) {
         // Adding another copy of an existing manual card.
         await add.mutateAsync({
-          game: { slug: game.slug, name: game.name, source: 'manual' },
+          game: { slug: game.slug, name: game.name, source: game.source },
           card: { kind: 'local', id: fromResult.externalId },
           condition,
           quantity,
@@ -317,13 +319,14 @@ function ConfirmAddForm({
           manualPrice: manual,
         });
       } else {
-        // Brand new manual card.
+        // Brand new manual card (works under any game; the CARD is manual even
+        // if the game itself is a TCG-API game like Pokémon).
         if (!name.trim()) {
           setError('Name is required.');
           return;
         }
         await add.mutateAsync({
-          game: { slug: game.slug, name: game.name, source: 'manual' },
+          game: { slug: game.slug, name: game.name, source: game.source },
           card: {
             kind: 'catalog',
             externalId: null,

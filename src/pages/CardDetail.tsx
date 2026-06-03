@@ -15,6 +15,7 @@ import {
   ChevronLeftIcon,
   ImageIcon,
   RefreshIcon,
+  StarIcon,
   TrashIcon,
 } from '../components/icons';
 
@@ -48,7 +49,7 @@ export function CardDetail() {
 function CardDetailView({ item }: { item: CollectionItem }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { updateQuantity, remove, refresh, updateImage, updatePrice } =
+  const { updateQuantity, remove, refresh, updateImage, updatePrice, favorite } =
     useCollectionMutations();
 
   const [busyMsg, setBusyMsg] = useState<string | null>(null);
@@ -125,11 +126,23 @@ function CardDetailView({ item }: { item: CollectionItem }) {
       </div>
 
       {/* Title */}
-      <div>
-        <h1 className="text-2xl font-bold">{card.name}</h1>
-        <p className="text-sm text-white/50">
-          {[card.game.name, card.set_name, card.number].filter(Boolean).join(' · ')}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{card.name}</h1>
+          <p className="text-sm text-white/50">
+            {[card.game.name, card.set_name, card.number].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+        <button
+          onClick={() => favorite.mutate({ id: item.id, value: !item.is_favorite })}
+          className={`shrink-0 rounded-full p-2 transition-colors ${
+            item.is_favorite ? 'text-amber-400' : 'text-white/40 hover:text-white'
+          }`}
+          title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label="Toggle favorite"
+        >
+          <StarIcon filled={item.is_favorite} className="h-6 w-6" />
+        </button>
       </div>
 
       {/* Price summary */}

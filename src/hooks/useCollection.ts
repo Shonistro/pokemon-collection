@@ -4,6 +4,7 @@ import {
   fetchCollection,
   refreshPrices,
   removeItem,
+  setFavorite,
   setQuantity,
   updateCardImage,
   updateManualPrice,
@@ -61,5 +62,10 @@ export function useCollectionMutations() {
     onSuccess: invalidate,
   });
 
-  return { add, updateQuantity, remove, refresh, updateImage, updatePrice };
+  const favorite = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) => setFavorite(id, value),
+    onSuccess: invalidate,
+  });
+
+  return { add, updateQuantity, remove, refresh, updateImage, updatePrice, favorite };
 }

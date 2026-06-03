@@ -94,6 +94,7 @@ export interface Database {
           last_known_price: number | null;
           previous_price: number | null;
           price_updated_at: string | null;
+          is_favorite: boolean;
           created_at: string;
         };
         Insert: {
@@ -107,6 +108,7 @@ export interface Database {
           last_known_price?: number | null;
           previous_price?: number | null;
           price_updated_at?: string | null;
+          is_favorite?: boolean;
           created_at?: string;
         };
         Update: {
@@ -120,6 +122,7 @@ export interface Database {
           last_known_price?: number | null;
           previous_price?: number | null;
           price_updated_at?: string | null;
+          is_favorite?: boolean;
           created_at?: string;
         };
         Relationships: [

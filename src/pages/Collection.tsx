@@ -11,7 +11,7 @@ import { QuotaIndicator } from '../components/QuotaIndicator';
 import { useQuota } from '../hooks/useQuota';
 import { useRecordSnapshot, useSnapshots } from '../hooks/usePortfolio';
 import { Spinner } from '../components/Spinner';
-import { LogoutIcon, PlusIcon, RefreshIcon, SearchIcon } from '../components/icons';
+import { LogoutIcon, PlusIcon, RefreshIcon, SearchIcon, StarIcon } from '../components/icons';
 import { CONDITIONS, type Condition } from '../types';
 
 // Skip cards whose price was refreshed within this many hours (saves quota).
@@ -39,12 +39,14 @@ export function Collection() {
   const [condition, setCondition] = useState<Condition | ''>('');
   const [sort, setSort] = useState<SortKey>('recent');
   const [search, setSearch] = useState('');
+  const [favOnly, setFavOnly] = useState(false);
   const [hideValues, setHideValues] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
   const all = items ?? [];
   const fullTotal = collectionTotal(all); // whole portfolio (ignores filters)
-  const hasFilter = Boolean(gameSlug || setName || condition || search.trim());
+  const hasFilter = Boolean(gameSlug || setName || condition || favOnly || search.trim());
+  const favCount = all.filter((i) => i.is_favorite).length;
 
   // Persist today's portfolio value once the collection has loaded / changed.
   useRecordSnapshot(fullTotal, !isLoading && items !== undefined);
@@ -67,6 +69,7 @@ export function Collection() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const arr = all.filter((i) => {
+      if (favOnly && !i.is_favorite) return false;
       if (gameSlug && i.card.game.slug !== gameSlug) return false;
       if (setName && i.card.set_name !== setName) return false;
       if (condition && i.condition !== condition) return false;
@@ -90,8 +93,10 @@ export function Collection() {
         break;
       // 'recent' = default order (created_at desc from the query)
     }
+    // Pin favorites to the top (stable: keeps the chosen sort within each group).
+    arr.sort((a, b) => Number(!!b.is_favorite) - Number(!!a.is_favorite));
     return arr;
-  }, [all, gameSlug, setName, condition, search, sort]);
+  }, [all, gameSlug, setName, condition, favOnly, search, sort]);
 
   const total = collectionTotal(filtered);
 
@@ -197,6 +202,16 @@ export function Collection() {
           )}
           Refresh prices{willRefresh > 0 ? ` (${willRefresh})` : ''}
         </button>
+        {favCount > 0 && (
+          <button
+            onClick={() => setFavOnly((v) => !v)}
+            className={`btn-ghost ${favOnly ? 'border-amber-400/40 text-amber-400' : ''}`}
+            title="Show favorites only"
+          >
+            <StarIcon filled={favOnly} className="h-4 w-4" />
+            {favOnly ? 'Favorites only' : `Favorites (${favCount})`}
+          </button>
+        )}
         <QuotaIndicator />
         {refreshMsg && <span className="text-xs text-white/50">{refreshMsg}</span>}
       </div>

@@ -1,12 +1,21 @@
 import { Link } from 'react-router-dom';
 import type { CollectionItem } from '../types';
 import { effectiveUnitPrice, formatPrice, itemValue } from '../lib/format';
-import { ImageIcon } from './icons';
+import { useCollectionMutations } from '../hooks/useCollection';
+import { ImageIcon, StarIcon } from './icons';
 
 /** A single card in the collection gallery. Links to the detail screen. */
 export function CardTile({ item }: { item: CollectionItem }) {
   const { card } = item;
   const unit = effectiveUnitPrice(item);
+  const { favorite } = useCollectionMutations();
+
+  function toggleFavorite(e: React.MouseEvent) {
+    // Don't navigate to the detail page when tapping the star.
+    e.preventDefault();
+    e.stopPropagation();
+    favorite.mutate({ id: item.id, value: !item.is_favorite });
+  }
 
   return (
     <Link
@@ -31,6 +40,16 @@ export function CardTile({ item }: { item: CollectionItem }) {
             ×{item.quantity}
           </span>
         )}
+        <button
+          onClick={toggleFavorite}
+          className={`absolute left-2 top-2 rounded-full bg-black/60 p-1.5 transition-colors ${
+            item.is_favorite ? 'text-amber-400' : 'text-white/60 hover:text-white'
+          }`}
+          aria-label={item.is_favorite ? 'Unfavorite' : 'Favorite'}
+          title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <StarIcon filled={item.is_favorite} className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col gap-0.5 p-3">

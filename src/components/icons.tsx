@@ -100,6 +100,18 @@ export function CollectionIcon(props: IconProps) {
   );
 }
 
+export function StarIcon({ filled = false, ...props }: IconProps & { filled?: boolean }) {
+  return (
+    <svg
+      {...base}
+      fill={filled ? 'currentColor' : 'none'}
+      {...props}
+    >
+      <path d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.78L12 16.77l-5.2 2.73.99-5.78-4.21-4.1 5.82-.85L12 3.5z" />
+    </svg>
+  );
+}
+
 export function ImageIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

@@ -10,7 +10,7 @@ import type { CardSource, Condition, CollectionItem, GameSource } from '../types
 
 const SELECT_COLLECTION = `
   id, user_id, card_id, condition, quantity,
-  acquired_price, manual_price, last_known_price, previous_price, price_updated_at, created_at,
+  acquired_price, manual_price, last_known_price, previous_price, price_updated_at, is_favorite, created_at,
   card:cards!inner (
     id, game_id, name, set_name, number, image_url, external_id, source, created_at,
     game:games!inner ( id, slug, name, source, created_at )
@@ -165,6 +165,15 @@ export async function setQuantity(itemId: string, quantity: number): Promise<voi
 
 export async function removeItem(itemId: string): Promise<void> {
   const { error } = await supabase.from('collection').delete().eq('id', itemId);
+  if (error) throw error;
+}
+
+/** Star / unstar a collection entry (favorites pin to the top of the gallery). */
+export async function setFavorite(itemId: string, value: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('collection')
+    .update({ is_favorite: value })
+    .eq('id', itemId);
   if (error) throw error;
 }
 
