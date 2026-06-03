@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background-color: #000;
+}
+
+/* Thin, dark scrollbars to match the theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1f2937 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #1f2937;
+  border-radius: 9999px;
+}
+
+@layer components {
+  /* Reusable surface / button primitives used across screens */
+  .surface {
+    @apply rounded-2xl border border-white/5 bg-bg-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-semibold transition-colors disabled:cursor-not-allowed
+           disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-black hover:bg-accent-soft;
+  }
+  .btn-ghost {
+    @apply btn border border-white/10 text-white hover:bg-white/5;
+  }
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-bg-surface px-4 py-3
+           text-white placeholder:text-white/30 outline-none
+           focus:border-accent/60 focus:ring-1 focus:ring-accent/40;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/50;
+  }
+}

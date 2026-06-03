@@ -1,0 +1,9 @@
+# Supabase local/project config.
+# `project_id` is just a local label; link to your real project with:
+#   supabase link --project-ref <your-project-ref>
+project_id = "card-collection-tracker"
+
+[functions.tcg-proxy]
+# Platform-level JWT verification (defense in depth — the function also calls
+# auth.getUser() itself). Only authenticated users can invoke the proxy.
+verify_jwt = true
