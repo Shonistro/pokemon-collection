@@ -31,7 +31,15 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type Action = 'games' | 'sets' | 'search' | 'card' | 'prices' | 'pw_search' | 'pw_card';
+type Action =
+  | 'games'
+  | 'sets'
+  | 'search'
+  | 'card'
+  | 'prices'
+  | 'pw_search'
+  | 'pw_card'
+  | 'pw_image';
 
 class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -117,6 +125,45 @@ function json(body: unknown, status = 200) {
   });
 }
 
+/**
+ * Special action: fetch a PokéWallet card image (auth'd binary endpoint) on the
+ * server, cache it in Supabase Storage, and return a PUBLIC url. This is how
+ * PokéWallet-sourced cards get an image without ever exposing the API key.
+ */
+async function handlePwImage(params: Record<string, unknown>) {
+  const id = (typeof params.id === 'string' ? params.id : '').trim();
+  if (!id) return json({ error: 'Missing "id"' }, 400);
+
+  const apiKey = Deno.env.get('POKEWALLET_API_KEY');
+  if (!apiKey) return json({ error: 'Server is missing POKEWALLET_API_KEY secret' }, 500);
+
+  const img = await fetch(`${PW_BASE}/images/${encodeURIComponent(id)}?size=high`, {
+    headers: { 'X-API-Key': apiKey },
+  });
+  if (!img.ok) return json({ error: `Image fetch failed (${img.status})` }, img.status);
+
+  const contentType = img.headers.get('content-type') || 'image/jpeg';
+  const ext = contentType.includes('png') ? 'png' : 'jpg';
+  const bytes = new Uint8Array(await img.arrayBuffer());
+
+  // Service-role client bypasses Storage RLS; cache under a shared path so the
+  // same card image is reused across users.
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+  const safe = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const path = `pokewallet/${safe}.${ext}`;
+
+  const { error: upErr } = await admin.storage
+    .from('card-images')
+    .upload(path, bytes, { contentType, upsert: true });
+  if (upErr) return json({ error: `Storage upload failed: ${upErr.message}` }, 500);
+
+  const { data } = admin.storage.from('card-images').getPublicUrl(path);
+  return json({ data: { url: data.publicUrl } });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -143,6 +190,9 @@ Deno.serve(async (req: Request) => {
     const action = body?.action as Action;
     const params = (body?.params ?? {}) as Record<string, unknown>;
     if (!action) return json({ error: 'Missing "action"' }, 400);
+
+    // Image caching is a special flow (fetch binary -> Storage -> public URL).
+    if (action === 'pw_image') return await handlePwImage(params);
 
     const { url, keyEnv } = buildRequest(action, params);
 

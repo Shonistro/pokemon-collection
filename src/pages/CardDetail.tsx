@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCollection, useCollectionMutations } from '../hooks/useCollection';
 import { useAuth } from '../context/AuthContext';
 import { uploadCardImage } from '../lib/storage';
+import { fetchPokeWalletImageUrl } from '../providers/PokeWalletProvider';
 import {
   effectiveUnitPrice,
   formatPrice,
@@ -85,6 +86,23 @@ function CardDetailView({ item }: { item: CollectionItem }) {
     setBusyMsg(res.updated ? 'Price refreshed.' : 'No price update available.');
   }
 
+  async function handleFetchImage() {
+    if (!card.external_id) return;
+    setUploading(true);
+    setBusyMsg(null);
+    try {
+      const url = await fetchPokeWalletImageUrl(card.external_id);
+      if (url) {
+        await updateImage.mutateAsync({ cardId: card.id, imageUrl: url });
+        setBusyMsg('Image added.');
+      } else {
+        setBusyMsg('Could not fetch image.');
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleSavePrice() {
     const p = priceInput ? Number(priceInput) : null;
     await updatePrice.mutateAsync({ id: item.id, price: p });
@@ -123,6 +141,16 @@ function CardDetailView({ item }: { item: CollectionItem }) {
             onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
           />
         </label>
+        {card.source === 'pokewallet' && !card.image_url && card.external_id && (
+          <button
+            onClick={handleFetchImage}
+            className="btn-ghost mt-2 w-full"
+            disabled={uploading || updateImage.isPending}
+          >
+            {uploading ? <Spinner className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
+            Fetch image from PokéWallet
+          </button>
+        )}
       </div>
 
       {/* Title */}

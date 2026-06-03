@@ -4,6 +4,7 @@ import { useGames, type GameOption } from '../hooks/useGames';
 import { useFavoriteGames } from '../hooks/useFavoriteGames';
 import { useCollectionMutations } from '../hooks/useCollection';
 import { getProviderForGame } from '../providers/registry';
+import { fetchPokeWalletImageUrl } from '../providers/PokeWalletProvider';
 import { uploadCardImage } from '../lib/storage';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../lib/format';
@@ -319,6 +320,11 @@ function ConfirmAddForm({
 
     try {
       if (isTcg && fromResult) {
+        // PokéWallet results have no image URL — cache one via the proxy on add.
+        let imageUrl = fromResult.imageUrl;
+        if (fromResult.source === 'pokewallet' && !imageUrl) {
+          imageUrl = await fetchPokeWalletImageUrl(fromResult.externalId);
+        }
         await add.mutateAsync({
           game: { slug: game.slug, name: game.name, source: game.source },
           card: {
@@ -327,7 +333,7 @@ function ConfirmAddForm({
             name: fromResult.name,
             setName: fromResult.setName,
             number: fromResult.number,
-            imageUrl: fromResult.imageUrl,
+            imageUrl,
             // tcgapi or pokewallet — drives which provider refreshes the price.
             source: fromResult.source,
           },

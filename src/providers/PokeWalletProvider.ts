@@ -108,3 +108,21 @@ export class PokeWalletProvider implements PriceProvider {
 }
 
 export const pokeWalletProvider = new PokeWalletProvider();
+
+/**
+ * Fetch a PokéWallet card image via the proxy (server caches it to Supabase
+ * Storage and returns a public URL). Returns null on failure. Costs one
+ * PokéWallet request, so only call it on an explicit action (e.g. on add).
+ */
+export async function fetchPokeWalletImageUrl(externalId: string): Promise<string | null> {
+  try {
+    const data = await callProxy<{ url?: string }>(
+      'pw_image',
+      { id: externalId },
+      { trackQuota: false },
+    );
+    return data?.url ?? null;
+  } catch {
+    return null;
+  }
+}

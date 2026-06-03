@@ -11,7 +11,8 @@ export type ProxyAction =
   | 'card'
   | 'prices'
   | 'pw_search'
-  | 'pw_card';
+  | 'pw_card'
+  | 'pw_image';
 
 interface ProxyEnvelope<T> {
   data: T;
