@@ -244,6 +244,21 @@ confirmation to skip that step.
   **disabled** when the remaining daily quota is smaller than the cost.
 - Manual-game cards never hit the API; you set their price by hand.
 
+## Install as an app (PWA)
+
+The app is a PWA (via `vite-plugin-pwa`): it has a web manifest, icons, and a
+service worker that precaches the app shell for fast/offline loading. After
+deploying:
+
+- **iPhone (Safari):** open the site → Share → *Add to Home Screen*.
+- **Android (Chrome):** open the site → menu → *Install app*.
+- **Desktop (Chrome/Edge):** an install icon appears in the address bar.
+
+The service worker only precaches the built app shell — it never caches
+Supabase/TCG responses, so prices always come from the live DB cache (and update
+only on refresh). Icons are generated from a source image with
+`node scripts/gen-icons.mjs <image.png>` into `public/`.
+
 ## Troubleshooting
 
 - **Proxy returns 401 in the app:** make sure you're logged in. The function
