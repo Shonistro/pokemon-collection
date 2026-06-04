@@ -121,18 +121,20 @@ export class TcgApiProvider implements PriceProvider {
       .filter((i) => i && i.id && i.name)
       .map(toCardResult);
 
-    // For a full number like "098/088", the numerator search returns every card
-    // containing "098" (098/086, 098/193, 030/098, ...). Narrow to the exact
-    // collector number so the user gets the card they actually asked for.
+    // For a full number like "098/088", the API's full-text search matches only
+    // the bare numerator ("098") and returns EVERY card containing it — and that
+    // list is PAGINATED at 50/page while we fetch only page 1. So the requested
+    // card may not even be on this page. Narrow to the exact collector number.
     if (isFullNumber(raw)) {
       const want = canonicalNumber(raw);
       const exact = results.filter(
         (r) => r.number != null && canonicalNumber(r.number) === want,
       );
-      // Prefer the exact collector-number match; if none (e.g. the card isn't in
-      // the numerator results), fall back to the broader list instead of showing
-      // an empty screen.
-      return exact.length > 0 ? exact : results;
+      // Return ONLY exact matches. If none are on page 1 (the card is on a later
+      // page, or the API simply can't match an alphanumeric number like "TG12"),
+      // return [] so the FallbackProvider hands off to PokéWallet's native number
+      // search — instead of showing 50 unrelated cards that also hide the answer.
+      return exact;
     }
 
     return results;

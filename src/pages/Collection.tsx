@@ -212,7 +212,8 @@ export function Collection() {
             {favOnly ? 'Favorites only' : `Favorites (${favCount})`}
           </button>
         )}
-        <QuotaIndicator />
+        <QuotaIndicator provider="tcgapi" />
+        <QuotaIndicator provider="pokewallet" />
         {refreshMsg && <span className="text-xs text-white/50">{refreshMsg}</span>}
       </div>
       {staleCount === 0 && all.length > 0 ? (

@@ -1,10 +1,12 @@
-import { useSyncExternalStore } from 'react';
-import { getRateLimit, subscribeRateLimit } from '../lib/quotaStore';
+import { useCallback, useSyncExternalStore } from 'react';
+import { getRateLimit, subscribeRateLimit, type QuotaKey } from '../lib/quotaStore';
 
 /**
- * Subscribe to the latest TCG API rate-limit info. Returns null until the first
- * proxy call of the session reports it.
+ * Subscribe to the latest daily rate-limit info for one upstream ('tcgapi' by
+ * default, or 'pokewallet'). Returns null until the first proxy call to that API
+ * this session reports numbers.
  */
-export function useQuota() {
-  return useSyncExternalStore(subscribeRateLimit, getRateLimit, getRateLimit);
+export function useQuota(provider: QuotaKey = 'tcgapi') {
+  const getSnapshot = useCallback(() => getRateLimit(provider), [provider]);
+  return useSyncExternalStore(subscribeRateLimit, getSnapshot, getSnapshot);
 }

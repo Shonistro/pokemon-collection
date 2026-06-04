@@ -7,8 +7,9 @@ import type { PriceProvider } from './PriceProvider';
  * Function. Used as the FALLBACK after TcgApiProvider — it natively searches by
  * collector number (e.g. "025/165") and has a generous 1000/day quota.
  *
- * Quota tracking is disabled on its proxy calls (`trackQuota: false`) so the
- * UI's quota indicator keeps showing the primary TCG API budget.
+ * Its proxy calls (pw_*) bill against a SEPARATE quota budget from the TCG API;
+ * `callProxy` records them under the 'pokewallet' key, shown by its own
+ * QuotaIndicator. The primary TCG API ('tcgapi') budget stays independent.
  *
  * Note: PokéWallet exposes images only via an authenticated endpoint, so search
  * results carry no image URL — cards added via this fallback show a placeholder
@@ -85,22 +86,14 @@ export class PokeWalletProvider implements PriceProvider {
   readonly id = 'pokewallet';
 
   async searchCards(query: string, _game: string): Promise<CardResult[]> {
-    const payload = await callProxy<unknown>(
-      'pw_search',
-      { q: query, limit: 20 },
-      { trackQuota: false },
-    );
+    const payload = await callProxy<unknown>('pw_search', { q: query, limit: 20 });
     return resultsArray(payload)
       .filter((r) => r && r.id)
       .map(toResult);
   }
 
   async getPrice(externalId: string): Promise<number | null> {
-    const payload = await callProxy<Record<string, unknown>>(
-      'pw_card',
-      { id: externalId },
-      { trackQuota: false },
-    );
+    const payload = await callProxy<Record<string, unknown>>('pw_card', { id: externalId });
     // The card endpoint may return the object directly or wrapped.
     const card = (payload?.card ?? payload?.data ?? payload) as PwResult | undefined;
     return marketFrom(card?.tcgplayer);
@@ -116,11 +109,7 @@ export const pokeWalletProvider = new PokeWalletProvider();
  */
 export async function fetchPokeWalletImageUrl(externalId: string): Promise<string | null> {
   try {
-    const data = await callProxy<{ url?: string }>(
-      'pw_image',
-      { id: externalId },
-      { trackQuota: false },
-    );
+    const data = await callProxy<{ url?: string }>('pw_image', { id: externalId });
     return data?.url ?? null;
   } catch {
     return null;
